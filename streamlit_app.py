@@ -1,55 +1,37 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-from pathlib import Path
-
+import pandas as pd
 import streamlit as st
 
-dir_path = Path(__file__).parent
+# File path
+dashboard_path = "APIIS_Deck_PRIYA MIYATRA.xlsx"
 
+# Load dashboard
+df_dashboard = pd.read_excel(dashboard_path, sheet_name="WBR APIIS")
 
-# Note that this needs to be in a method so we can have an e2e playwright test.
-def run():
-    page = st.navigation(
-        [
-            st.Page(
-                dir_path / "hello.py", title="Hello", icon=":material/waving_hand:"
-            ),
-            st.Page(
-                dir_path / "dataframe_demo.py",
-                title="DataFrame demo",
-                icon=":material/table:",
-            ),
-            st.Page(
-                dir_path / "plotting_demo.py",
-                title="Plotting demo",
-                icon=":material/show_chart:",
-            ),
-            st.Page(
-                dir_path / "mapping_demo.py",
-                title="Mapping demo",
-                icon=":material/public:",
-            ),
-            st.Page(
-                dir_path / "animation_demo.py",
-                title="Animation demo",
-                icon=":material/animation:",
-            ),
-        ]
-    )
-    page.run()
+# Rename columns to A, B, C, ...
+df_dashboard.columns = [chr(65 + i) for i in range(len(df_dashboard.columns))]
 
+# Remove column A
+df_dashboard.drop(columns=["A"], inplace=True)
 
-if __name__ == "__main__":
-    run()
+# Replace 'None' values with blanks
+df_dashboard.replace(to_replace=[None, "None", pd.NA, "nan", "NaN"], value="", inplace=True)
+
+# Strip whitespace from all cells
+df_dashboard = df_dashboard.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+
+# Forward-fill values to simulate merged cells in Excel
+df_dashboard.ffill(inplace=True)
+
+# Drop rows where all values are empty after stripping
+df_dashboard = df_dashboard.replace("", pd.NA).dropna(how="all")
+
+def style_dataframe(df):
+    """Apply styling to wrap text in cells."""
+    return df.style.set_properties(**{'white-space': 'pre-wrap'})
+
+# Streamlit app
+st.set_page_config(layout="wide")
+st.title("Dashboard Viewer")
+
+st.subheader("WBR APIIS Sheet Preview")
+st.dataframe(style_dataframe(df_dashboard))
